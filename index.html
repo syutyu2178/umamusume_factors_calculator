@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ウマ娘 因子周回シミュレーター</title>
+    <style>
+        :root {
+            --muted: #666;
+            --blue-bg: #e8f4fd;
+            --red-bg: #fde8ec;
+            --green-bg: #e8fdee;
+            --white-bg: #fffbe8;
+            --card-pad: 14px;
+            --gap: 16px;
+            --radius: 10px;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", Arial;
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+            color: #111;
+            background: #fbfcff;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            margin-bottom: 10px;
+        }
+
+        .card {
+            border: 1px solid #e6e6ef;
+            background: white;
+            padding: var(--card-pad);
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+            box-shadow: 0 2px 6px rgba(16, 24, 40, 0.03);
+        }
+
+        #blueCard {
+            background: var(--blue-bg);
+        }
+
+        #redCard {
+            background: var(--red-bg);
+        }
+
+        #greenCard {
+            background: var(--green-bg);
+        }
+
+        #whiteCard {
+            background: var(--white-bg);
+        }
+
+        h3 {
+            margin: 0 0 10px 0;
+            padding-bottom: 6px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .row {
+            display: flex;
+            gap: var(--gap);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .grid5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.95rem;
+        }
+
+        input[type=number],
+        select,
+        input[type=text],
+        input[type=date] {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #cfcfe6;
+            width: 100%;
+            box-sizing: border-box;
+            background: white;
+        }
+
+        .smallInput {
+            width: 120px;
+        }
+
+        .smallSelect {
+            width: 140px;
+        }
+
+        .statSelect {
+            width: 140px;
+            margin-left: 8px;
+        }
+
+        .starSelect {
+            width: 120px;
+            margin-left: 8px;
+        }
+
+        button {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 0;
+            background: #0366d6;
+            color: white;
+            cursor: pointer;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background: #f6f7fb;
+            padding: 10px;
+            border-radius: 6px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .disabled {
+            opacity: 0.45;
+            pointer-events: none;
+        }
+
+        .toggleRow {
+            gap: 24px;
+            padding: 6px 0;
+        }
+
+        .whiteRow {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .whiteRow>* {
+            font-size: 0.95rem;
+        }
+
+        .smallBtn {
+            padding: 6px 8px;
+            border-radius: 6px;
+            background: #e6e6ef;
+            color: #111;
+            border: none;
+            cursor: pointer;
+        }
+
+        .removeBtn {
+            background: #ff6b6b;
+            color: white;
+            border-radius: 6px;
+            padding: 4px 8px;
+            border: 0;
+            cursor: pointer;
+        }
+
+        .sectionTitleRow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @media (max-width:800px) {
+            .grid5 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .statSelect {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>ウマ娘 因子周回シミュレーター</h1>
+    <p class="muted">青・赤・緑・白(スキル/レース)・白(遺伝子)の同時成立確率を計算します。</p>
+
+    <div class="card">
+        <h3>共通設定</h3>
+        <div class="row">
+            <label>1日に可能な育成回数
+                <input id="numPerDay" type="number" value="10" min="1" max="50" class="smallInput"
+                    style="margin-left:8px">
+            </label>
+
+            <label>再抽選回数(1〜3)
+                <input id="numRerolls" type="number" value="3" min="1" max="3" class="smallInput"
+                    style="margin-left:8px">
+            </label>
+
+            <label>目標因子を得られる期待値(%)
+                <input id="targetProb" type="number" value="90" min="1" max="99" class="smallInput"
+                    style="margin-left:8px">
+            </label>
+
+            <label style="margin-left:8px">タイムリミット
+                <input id="deadlineDate" type="date" style="margin-left:8px" class="smallInput">
+            </label>
+
+            <label style="margin-left:8px">因子指定パス
+                <select id="pathType" class="smallSelect" style="margin-left:8px">
+                    <option value="none">指定しない</option>
+                    <option value="blue">青を固定</option>
+                    <option value="red">赤を固定</option>
+                </select>
+            </label>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>どの因子を計算に含めるか</h3>
+        <div class="row toggleRow">
+            <label><input type="checkbox" id="enableBlue" checked> 青因子</label>
+            <label><input type="checkbox" id="enableRed" checked> 赤因子</label>
+            <label><input type="checkbox" id="enableGreen" checked> 緑因子</label>
+            <label><input type="checkbox" id="enableWhite" checked> 白因子</label>
+        </div>
+        <p class="muted">チェックを外すと該当因子は入力不可(グレーアウト)になります。</p>
+    </div>
+
+    <!-- BLUE -->
+    <div class="card" id="blueCard">
+        <h3 id="blueTitle">青因子(ステータス)</h3>
+        <div class="grid5">
+            <div><label>スピード
+                    <select id="speedRank" class="statSelect">
+                        <option value="belowB">～599 / ～C+</option>
+                        <option value="BtoS">600～1099 / B～S+</option>
+                        <option value="SS" selected>1100～ / SS～</option>
+                    </select>
+                </label></div>
+
+            <div><label>スタミナ
+                    <select id="staminaRank" class="statSelect">
+                        <option value="belowB">～599 / ～C+</option>
+                        <option value="BtoS">600～1099 / B～S+</option>
+                        <option value="SS" selected>1100～ / SS～</option>
+                    </select>
+                </label></div>
+
+            <div><label>パワー
+                    <select id="powerRank" class="statSelect">
+                        <option value="belowB">～599 / ～C+</option>
+                        <option value="BtoS">600～1099 / B～S+</option>
+                        <option value="SS" selected>1100～ / SS～</option>
+                    </select>
+                </label></div>
+
+            <div><label>根性
+                    <select id="gutsRank" class="statSelect">
+                        <option value="belowB">～599 / ～C+</option>
+                        <option value="BtoS">600～1099 / B～S+</option>
+                        <option value="SS" selected>1100～ / SS～</option>
+                    </select>
+                </label></div>
+
+            <div><label>賢さ
+                    <select id="iqRank" class="statSelect">
+                        <option value="belowB">～599 / ～C+</option>
+                        <option value="BtoS">600～1099 / B～S+</option>
+                        <option value="SS" selected>1100～ / SS～</option>
+                    </select>
+                </label></div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+            <label>狙いの因子
+                <select id="fixBlue" class="smallSelect" style="margin-left:8px;width:180px">
+                    <option value="none">固定しない(等確率)</option>
+                    <option value="speed">スピード</option>
+                    <option value="stamina">スタミナ</option>
+                    <option value="power">パワー</option>
+                    <option value="guts">根性</option>
+                    <option value="iq">賢さ</option>
+                </select>
+            </label>
+
+            <label style="margin-left:12px">星条件
+                <select id="starGoalBlue" class="starSelect" style="margin-left:8px">
+                    <option value="ge1">指定しない</option>
+                    <option value="ge2">★2以上</option>
+                    <option value="only1">★1のみ</option>
+                    <option value="only2">★2のみ</option>
+                    <option value="only3" selected>★3のみ</option>
+                </select>
+            </label>
+        </div>
+        <p class="muted">青因子の星分布は3つの区分（～599 / 600～1099 / 1100～）で判定</p>
+    </div>
+
+    <!-- RED -->
+    <div class="card" id="redCard">
+        <h3 id="redTitle">赤因子(適性)</h3>
+        <div class="row">
+            <label>狙いの因子
+                <select id="redTarget" style="margin-left:8px">
+                    <option value="芝" selected>芝</option>
+                    <option value="ダート">ダート</option>
+                    <option value="短距離">短距離</option>
+                    <option value="マイル">マイル</option>
+                    <option value="中距離">中距離</option>
+                    <option value="長距離">長距離</option>
+                    <option value="逃げ">逃げ</option>
+                    <option value="先行">先行</option>
+                    <option value="差し">差し</option>
+                    <option value="追込">追込</option>
+                </select>
+            </label>
+
+            <label style="margin-left:12px">赤因子の候補数(3〜10)
+                <input id="numSuitable" type="number" min="3" max="10" value="5" style="width:84px;margin-left:8px">
+            </label>
+
+            <label style="margin-left:12px">星条件
+                <select id="starGoalRed" class="starSelect" style="margin-left:8px">
+                    <option value="ge1">指定しない</option>
+                    <option value="ge2">★2以上</option>
+                    <option value="only1">★1のみ</option>
+                    <option value="only2">★2のみ</option>
+                    <option value="only3" selected>★3のみ</option>
+                </select>
+            </label>
+        </div>
+        <p class="muted">赤因子の星分布は固定 ★1=20% / ★2=70% / ★3=10%</p>
+    </div>
+
+    <!-- GREEN -->
+    <div class="card" id="greenCard">
+        <h3>緑因子(固有)</h3>
+        <div class="row">
+            <label>星条件
+                <select id="starGoalGreen" class="starSelect" style="margin-left:8px">
+                    <option value="ge1">指定しない</option>
+                    <option value="ge2">★2以上</option>
+                    <option value="only1">★1のみ</option>
+                    <option value="only2">★2のみ</option>
+                    <option value="only3" selected>★3のみ</option>
+                </select>
+            </label>
+            <label style="margin-left:12px" class="muted">星分布はSS以上の育成ランクで固定 ★1=20% / ★2=70% / ★3=10%</label>
+        </div>
+    </div>
+
+    <!-- WHITE -->
+    <div class="card" id="whiteCard">
+        <h3>白因子</h3>
+
+        <div style="margin-bottom:8px" class="sectionTitleRow">
+            <div>
+                <strong>白因子(スキル/レース)</strong>
+                <p class="muted" style="margin-top:8px">白因子付与モデル（スキル/レース）：基礎確率(通常20% / ◎25% / 金40%) × 1.1^(親+祖)
+                    を算出。星条件でフィルタ(星分布との乗算)。</p>
+                <label>評価ランク(星分布)
+                    <select id="whiteRank" class="smallSelect" style="margin-left:8px;width:260px">
+                        <option value="Splus">S+以下 (★1:50% ★2:45% ★3:5%)</option>
+                        <option value="SS">SS以上 (★1:20% ★2:70% ★3:10%)</option>
+                        <option value="UE" selected>UE以上 (★1:18% ★2:70% ★3:12%)</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+        <div id="whiteSkillContainer"></div>
+        <div style="margin-top:8px">
+            <button id="addWhiteSkillBtn">＋追加（スキル/レース）</button>
+        </div>
+
+        <hr style="margin:12px 0">
+
+        <div style="margin-bottom:8px" class="sectionTitleRow">
+            <strong>白因子(遺伝子)</strong>
+        </div>
+        <div>
+            <p class="muted" style="margin-top:8px">赤因子合計ごとの確率: 0～5個→0% / 6～11個→40% / 12～18個→100%。星分布は赤因子と同じと仮定
+                ★1=20% / ★2=70% / ★3=10%</p>
+        </div>
+        <div id="whiteGeneContainer"></div>
+        <div style="margin-top:8px">
+            <button id="addWhiteGeneBtn">＋追加（遺伝子）</button>
+        </div>
+
+    </div>
+
+    <div style="text-align:right;margin-top:10px"><button id="compute">計算(全て同時に成立する確率)</button></div>
+
+    <div class="card" id="resultCard" style="display:none;margin-top:12px">
+        <h3>結果(同時成立)</h3>
+        <pre id="resultText"></pre>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+        <h3>参考文献</h3>
+        <ul style="margin:0;padding-left:20px">
+            <li><a href="https://umamusustation.com/blue_factor_analysis.html" target="_blank"
+                    rel="noopener">青因子確率分析</a></li>
+            <li><a href="https://aoneko-uma.fanbox.cc/posts/4359075" target="_blank"
+                    rel="noopener">【中間まとめ】育成における因子継承内容まとめ</a></li>
+        </ul>
+    </div>
+
+    <script>
+        /* =========================
+           分布データ(既存)
+           ========================= */
+        const blueStarDistByRank = {
+            'belowB': [0.90, 0.10, 0.00],
+            'BtoS': [0.495, 0.445, 0.06],
+            'SS': [0.20, 0.70, 0.10]
+        };
+
+        const redStarDist = [0.20, 0.70, 0.10];
+        const greenStarDist = [0.20, 0.70, 0.10];
+        const whiteStarDistSets = {
+            'Splus': [0.50, 0.45, 0.05],
+            'SS': [0.20, 0.70, 0.10],
+            'UE': [0.18, 0.70, 0.12]
+        };
+
+        function probFromCond(dist, cond) {
+            if (!dist) return 0;
+            if (cond === 'ge1') return dist[0] + dist[1] + dist[2];
+            if (cond === 'ge2') return dist[1] + dist[2];
+            if (cond === 'only3') return dist[2];
+            if (cond === 'only1') return dist[0];
+            if (cond === 'only2') return dist[1];
+            return 0;
+        }
+
+        /* =========================
+           白因子動的行作成（修正版）
+           ========================= */
+        const MAX_SKILLS = 10;
+        const MAX_GENES = 3;
+        const STORAGE_KEY = 'umaToolData_v3';
+
+        function createSkillRow(data) {
+            const div = document.createElement('div');
+            div.className = 'whiteRow skillRow';
+            div.innerHTML = `
+                <label>基礎確率:
+                  <select class="whiteBase" style="margin-left:6px;width:120px">
+                    <option value="0.20">通常 (20%)</option>
+                    <option value="0.25">◎ (25%)</option>
+                    <option value="0.40">金 (40%)</option>
+                  </select>
+                </label>
+                <label>親+祖の合計:
+                  <input type="number" min="0" max="6" value="0" class="whiteTotal" style="width:80px;margin-left:6px">
+                </label>
+                <label>星条件:
+                  <select class="whiteStarCond" style="margin-left:6px;width:140px">
+                    <option value="ge1">自由</option>
+                    <option value="ge2">★2以上</option>
+                    <option value="only1">★1のみ</option>
+                    <option value="only2">★2のみ</option>
+                    <option value="only3">★3のみ</option>
+                  </select>
+                </label>
+                <button class="removeBtn" type="button">✕</button>
+            `;
+            if (data) {
+                if (data.base) div.querySelector('.whiteBase').value = data.base;
+                if (typeof data.total !== 'undefined') div.querySelector('.whiteTotal').value = data.total;
+                if (data.star) div.querySelector('.whiteStarCond').value = data.star;
+            }
+            // attach change handlers
+            const inputs = div.querySelectorAll('.whiteBase, .whiteTotal, .whiteStarCond');
+            inputs.forEach(el => {
+                el.addEventListener('change', saveInputsToStorage);
+                el.addEventListener('input', saveInputsToStorage);
+            });
+            // remove handler
+            div.querySelector('.removeBtn').addEventListener('click', () => {
+                div.remove();
+                saveInputsToStorage();
+                updateAddButtonsState();
+            });
+            return div;
+        }
+
+        function createGeneRow(data) {
+            const div = document.createElement('div');
+            div.className = 'whiteRow geneRow';
+            div.innerHTML = `
+                <label>対象赤因子:
+                  <select class="whiteGeneTarget" style="margin-left:6px;width:120px">
+                    <option value="芝">芝</option>
+                    <option value="ダート">ダート</option>
+                    <option value="短距離">短距離</option>
+                    <option value="マイル">マイル</option>
+                    <option value="中距離">中距離</option>
+                    <option value="長距離">長距離</option>
+                    <option value="逃げ">逃げ</option>
+                    <option value="先行">先行</option>
+                    <option value="差し">差し</option>
+                    <option value="追込">追込</option>
+                  </select>
+                </label>
+                <label>赤因子合計:
+                  <select class="whiteGeneSum" style="margin-left:6px;width:120px">
+                    <option value="0-5">0〜5個</option>
+                    <option value="6-11">6〜11個</option>
+                    <option value="12-18">12〜18個</option>
+                  </select>
+                </label>
+                <label>星条件:
+                  <select class="whiteGeneStarCond" style="margin-left:6px;width:140px">
+                    <option value="ge1">自由</option>
+                    <option value="ge2">★2以上</option>
+                    <option value="only1">★1のみ</option>
+                    <option value="only2">★2のみ</option>
+                    <option value="only3">★3のみ</option>
+                  </select>
+                </label>
+                <button class="removeBtn" type="button">✕</button>
+            `;
+            if (data) {
+                if (data.target) div.querySelector('.whiteGeneTarget').value = data.target;
+                if (data.sum) div.querySelector('.whiteGeneSum').value = data.sum;
+                if (data.star) div.querySelector('.whiteGeneStarCond').value = data.star;
+            }
+            const inputs = div.querySelectorAll('.whiteGeneTarget, .whiteGeneSum, .whiteGeneStarCond');
+            inputs.forEach(el => {
+                el.addEventListener('change', saveInputsToStorage);
+                el.addEventListener('input', saveInputsToStorage);
+            });
+            div.querySelector('.removeBtn').addEventListener('click', () => {
+                div.remove();
+                saveInputsToStorage();
+                updateAddButtonsState();
+            });
+            return div;
+        }
+
+        function updateAddButtonsState() {
+            const skillCount = document.getElementById('whiteSkillContainer').querySelectorAll('.skillRow').length;
+            const geneCount = document.getElementById('whiteGeneContainer').querySelectorAll('.geneRow').length;
+            document.getElementById('addWhiteSkillBtn').disabled = skillCount >= MAX_SKILLS;
+            document.getElementById('addWhiteGeneBtn').disabled = geneCount >= MAX_GENES;
+        }
+
+        function addWhiteSkillRow(data) {
+            const container = document.getElementById('whiteSkillContainer');
+            const current = container.querySelectorAll('.skillRow').length;
+            if (current >= MAX_SKILLS) return;
+            const row = createSkillRow(data || {});
+            container.appendChild(row);
+            saveInputsToStorage();
+            updateAddButtonsState();
+        }
+
+        function addWhiteGeneRow(data) {
+            const container = document.getElementById('whiteGeneContainer');
+            const current = container.querySelectorAll('.geneRow').length;
+            if (current >= MAX_GENES) return;
+            const row = createGeneRow(data || {});
+            container.appendChild(row);
+            saveInputsToStorage();
+            updateAddButtonsState();
+        }
+
+        /* =========================
+           localStorage 保存/復元（拡張）
+           ========================= */
+        function saveInputsToStorage() {
+            try {
+                const all = {};
+                const els = document.querySelectorAll('input[id], select[id], textarea[id]');
+                els.forEach(el => {
+                    if (el.type === 'checkbox') all[el.id] = el.checked;
+                    else all[el.id] = el.value;
+                });
+
+                // 白(スキル/レース)
+                all['_whiteBases'] = Array.from(document.getElementsByClassName('whiteBase')).map(e => e.value);
+                all['_whiteTotals'] = Array.from(document.getElementsByClassName('whiteTotal')).map(e => e.value);
+                all['_whiteStars'] = Array.from(document.getElementsByClassName('whiteStarCond')).map(e => e.value);
+
+                // 白(遺伝子)
+                all['_whiteGeneTargets'] = Array.from(document.getElementsByClassName('whiteGeneTarget')).map(e => e.value);
+                all['_whiteGeneSums'] = Array.from(document.getElementsByClassName('whiteGeneSum')).map(e => e.value);
+                all['_whiteGeneStars'] = Array.from(document.getElementsByClassName('whiteGeneStarCond')).map(e => e.value);
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+            } catch (e) {
+                console.error('保存に失敗しました', e);
+            }
+        }
+
+        function loadInputsFromStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return null;
+                const data = JSON.parse(raw);
+                Object.keys(data).forEach(key => {
+                    if (key.startsWith('_')) return;
+                    const el = document.getElementById(key);
+                    if (!el) return;
+                    if (el.type === 'checkbox') el.checked = !!data[key];
+                    else el.value = data[key];
+                });
+                return data;
+            } catch (e) {
+                console.error('読み込みに失敗しました', e);
+                return null;
+            }
+        }
+
+        function restoreDynamicWhiteFromStorage(data) {
+            const skillContainer = document.getElementById('whiteSkillContainer');
+            const geneContainer = document.getElementById('whiteGeneContainer');
+            skillContainer.innerHTML = '';
+            geneContainer.innerHTML = '';
+
+            const bases = (data && data['_whiteBases']) || [];
+            const totals = (data && data['_whiteTotals']) || [];
+            const stars = (data && data['_whiteStars']) || [];
+
+            const gTargets = (data && data['_whiteGeneTargets']) || [];
+            const gSums = (data && data['_whiteGeneSums']) || [];
+            const gStars = (data && data['_whiteGeneStars']) || [];
+
+            // restore skills; if none, create default 1 (ユーザー指示)
+            if (bases.length === 0) {
+                addWhiteSkillRow();
+            } else {
+                for (let i = 0; i < bases.length; i++) {
+                    addWhiteSkillRow({
+                        base: bases[i],
+                        total: totals[i] || 0,
+                        star: stars[i] || 'ge1'
+                    });
+                }
+            }
+
+            // restore genes; if none, create default 1 (ユーザー指示)
+            if (gTargets.length === 0) {
+                addWhiteGeneRow();
+            } else {
+                for (let i = 0; i < gTargets.length && i < MAX_GENES; i++) {
+                    addWhiteGeneRow({
+                        target: gTargets[i],
+                        sum: gSums[i] || '0-5',
+                        star: gStars[i] || 'ge1'
+                    });
+                }
+            }
+
+            updateAddButtonsState();
+        }
+
+        /* =========================
+           計算処理（p_joint と日数/期限確率）
+           ========================= */
+        function computeHandler() {
+            const D = Math.max(1, parseInt(document.getElementById('numPerDay').value || 1, 10));
+            const r = Math.min(3, Math.max(1, parseInt(document.getElementById('numRerolls').value || 1, 10)));
+            const trialsPerDay = D * r;
+            const T = Math.min(0.999999, (parseFloat(document.getElementById('targetProb').value) || 90) / 100);
+            const path = document.getElementById('pathType').value;
+
+            const enableBlue = document.getElementById('enableBlue').checked;
+            const enableRed = document.getElementById('enableRed').checked;
+            const enableGreen = document.getElementById('enableGreen').checked;
+            const enableWhite = document.getElementById('enableWhite').checked;
+
+            let p_blue = 1.0, p_red = 1.0, p_green = 1.0, p_white_skill = 1.0, p_white_gene = 1.0;
+
+            /* ----- BLUE ----- */
+            if (enableBlue) {
+                const fix = document.getElementById('fixBlue').value; // none|speed|stamina|power|guts|iq
+                const starGoal = document.getElementById('starGoalBlue').value;
+                const keys = ['speed', 'stamina', 'power', 'guts', 'iq'];
+
+                if (fix !== 'none') {
+                    const selectId = (fix === 'iq' ? 'iqRank' : fix + 'Rank');
+                    const rankKey = document.getElementById(selectId).value; // now 'belowB'|'BtoS'|'SS'
+                    const dist = blueStarDistByRank[rankKey];
+                    const pStar = probFromCond(dist, starGoal);
+                    const selProb = (path === 'blue') ? 1.0 : (1.0 / 5.0);
+                    p_blue = selProb * pStar;
+                } else {
+                    p_blue = 0;
+                    keys.forEach(k => {
+                        const selectId = k + 'Rank';
+                        const rankKey = document.getElementById(selectId).value; // 'belowB'|'BtoS'|'SS'
+                        const dist = blueStarDistByRank[rankKey];
+                        const pStar = probFromCond(dist, starGoal);
+                        p_blue += (1.0 / 5.0) * pStar;
+                    });
+                }
+            }
+
+            /* ----- RED ----- */
+            if (enableRed) {
+                const m = Math.min(10, Math.max(3, parseInt(document.getElementById('numSuitable').value || 3, 10)));
+                const starGoal = document.getElementById('starGoalRed').value;
+                const pStar = probFromCond(redStarDist, starGoal);
+                if (path === 'red') {
+                    p_red = pStar;
+                } else {
+                    p_red = (1.0 / m) * pStar;
+                }
+            }
+
+            /* ----- GREEN ----- */
+            if (enableGreen) {
+                const starGoal = document.getElementById('starGoalGreen').value;
+                p_green = probFromCond(greenStarDist, starGoal);
+            }
+
+            /* ----- WHITE (スキル/レース) ----- */
+            if (enableWhite) {
+                const skillBaseEls = Array.from(document.getElementsByClassName('whiteBase'));
+                const totalEls = Array.from(document.getElementsByClassName('whiteTotal'));
+                const starEls = Array.from(document.getElementsByClassName('whiteStarCond'));
+                const k = skillBaseEls.length;
+                const rankKey = document.getElementById('whiteRank').value;
+                const dist = whiteStarDistSets[rankKey];
+
+                p_white_skill = 1.0;
+                for (let i = 0; i < k; i++) {
+                    const baseAttach = parseFloat((skillBaseEls[i] && skillBaseEls[i].value) || '0.20');
+                    const tot = Math.max(0, Math.min(6, parseInt((totalEls[i] && totalEls[i].value) || 0, 10)));
+                    const p_attach = baseAttach * Math.pow(1.1, tot);
+                    const pStar = probFromCond(dist, (starEls[i] && starEls[i].value) || 'ge1');
+                    const p_success = p_attach * pStar;
+                    p_white_skill *= p_success;
+                }
+
+                /* ----- WHITE (遺伝子) ----- */
+                const geneTargetEls = Array.from(document.getElementsByClassName('whiteGeneTarget'));
+                const geneSumEls = Array.from(document.getElementsByClassName('whiteGeneSum'));
+                const geneStarEls = Array.from(document.getElementsByClassName('whiteGeneStarCond'));
+
+                p_white_gene = 1.0;
+                for (let i = 0; i < geneTargetEls.length; i++) {
+                    const sumSel = (geneSumEls[i] && geneSumEls[i].value) || '0-5';
+                    let p_attach = 0.0;
+                    if (sumSel === '0-5') p_attach = 0.0;
+                    else if (sumSel === '6-11') p_attach = 0.4;
+                    else if (sumSel === '12-18') p_attach = 1.0;
+                    const pStar = probFromCond(redStarDist, (geneStarEls[i] && geneStarEls[i].value) || 'ge1');
+                    const p_success = p_attach * pStar;
+                    p_white_gene *= p_success;
+                }
+            }
+
+            /* ----- Joint probability(1試行あたり) ----- */
+            let p_joint = 1.0;
+            if (enableBlue) p_joint *= p_blue;
+            if (enableRed) p_joint *= p_red;
+            if (enableGreen) p_joint *= p_green;
+            if (enableWhite) p_joint *= (p_white_skill * p_white_gene);
+            if (!enableBlue && !enableRed && !enableGreen && !enableWhite) p_joint = 0;
+
+            /* ----- 必要試行回数と日数の計算 ----- */
+            let requiredTrials, requiredDays;
+            if (p_joint <= 0) {
+                requiredTrials = Infinity;
+                requiredDays = Infinity;
+            } else if (p_joint >= 1.0) {
+                requiredTrials = 1;
+                requiredDays = Math.ceil(1 / (Math.max(1, parseInt(document.getElementById('numPerDay').value || 1, 10)) * Math.min(3, Math.max(1, parseInt(document.getElementById('numRerolls').value || 1, 10)))));
+            } else {
+                const rawTrials = Math.log(1 - T) / Math.log(1 - p_joint);
+                requiredTrials = Math.max(0, Math.ceil(rawTrials));
+                requiredDays = Math.ceil(requiredTrials / trialsPerDay);
+            }
+
+            /* ----- タイムリミット評価 ----- */
+            let deadlineText = '(タイムリミット未指定)';
+            const deadlineVal = document.getElementById('deadlineDate').value;
+            if (deadlineVal) {
+                const today = new Date();
+                const deadline = new Date(deadlineVal + 'T00:00:00');
+                const diffMs = deadline - new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                if (diffDays < 0) {
+                    deadlineText = 'タイムリミットは過去日付です';
+                } else {
+                    const totalTrialsAvailable = diffDays * trialsPerDay;
+                    const probByDeadline = 1 - Math.pow(1 - p_joint, totalTrialsAvailable);
+                    deadlineText = `残り ${diffDays} 日 (計 ${totalTrialsAvailable} 回抽選) で完成する確率: ${(probByDeadline * 100).toFixed(6)} %`;
+                }
+            }
+
+            /* ----- 出力整形 ----- */
+            document.getElementById('resultCard').style.display = 'block';
+            const lines = [];
+            lines.push('=== 1試行あたりの同時成立確率(有効な因子すべてが成立) ===');
+            lines.push((p_joint * 100).toFixed(8) + ' %');
+            lines.push('');
+            lines.push(`=== 目標確率 ${(Math.min(99, Math.max(1, parseInt(document.getElementById('targetProb').value || 90, 10))))}% に達するまでの必要試行回数・日数 ===`);
+            if (requiredTrials === Infinity) {
+                lines.push('到達不可(1試行あたりの同時成立確率が 0 のため)');
+            } else {
+                lines.push('総試行数(抽選回数): ' + requiredTrials + ' 回');
+                lines.push('必要な日数(1日あたり ' + trialsPerDay + ' 抽選として): ' + requiredDays + ' 日');
+                lines.push('');
+            }
+            lines.push('=== タイムリミット評価 ===');
+            lines.push(deadlineText);
+            lines.push('');
+            lines.push('--- 内訳(1試行あたり確率) ---');
+            if (enableBlue) lines.push('青因子: ' + (p_blue * 100).toFixed(8) + ' %');
+            if (enableRed) lines.push('赤因子: ' + (p_red * 100).toFixed(8) + ' %');
+            if (enableGreen) lines.push('緑因子: ' + (p_green * 100).toFixed(8) + ' %');
+            if (enableWhite) {
+                lines.push('白因子(スキル/レース・全体): ' + (p_white_skill * 100).toFixed(8) + ' %');
+                lines.push('白因子(遺伝子・全体): ' + (p_white_gene * 100).toFixed(8) + ' %');
+            }
+
+            lines.push('\n--- 注意 ---');
+            lines.push('• 数値は有志推定から仮定したモデルに基づきます。公式値ではありません。');
+            lines.push('• 白因子の付与モデル: 基礎確率は 通常20% / ◎25% / 金40%。親や祖が同じ因子を持つごとに ×1.1^n で補正。');
+            lines.push('• 白(遺伝子)は赤因子の積み数区分から付与確率(0%/40%/100%)を適用し、星分布は赤因子と同じ(20/70/10)です。');
+
+            document.getElementById('resultText').textContent = lines.join('\n');
+
+            // 入力状態を保存
+            saveInputsToStorage();
+
+            // 結果までスクロール
+            document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        /* =========================
+           カードの有効/無効（既存）とロック表示
+           ========================= */
+        function setCardEnabled(cardId, enabled) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            card.classList.toggle('disabled', !enabled);
+            const inputs = card.querySelectorAll('input, select, button');
+            inputs.forEach(el => {
+                if (el.id === 'addWhiteSkillBtn' || el.id === 'addWhiteGeneBtn') { el.disabled = !enabled; return; }
+                if (el.id === 'compute') return;
+                el.disabled = !enabled;
+            });
+        }
+        function updateCardStates() {
+            setCardEnabled('blueCard', document.getElementById('enableBlue').checked);
+            setCardEnabled('redCard', document.getElementById('enableRed').checked);
+            setCardEnabled('greenCard', document.getElementById('enableGreen').checked);
+            setCardEnabled('whiteCard', document.getElementById('enableWhite').checked);
+        }
+        ['enableBlue', 'enableRed', 'enableGreen', 'enableWhite'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', updateCardStates);
+        });
+
+        const baseBlueTitle = document.getElementById('blueTitle').textContent;
+        const baseRedTitle = document.getElementById('redTitle').textContent;
+        function updateLockIcons() {
+            const p = document.getElementById('pathType').value;
+            const blueTitleEl = document.getElementById('blueTitle');
+            const redTitleEl = document.getElementById('redTitle');
+            blueTitleEl.textContent = baseBlueTitle;
+            redTitleEl.textContent = baseRedTitle;
+            if (p === 'blue') blueTitleEl.textContent = '🔒 ' + baseBlueTitle;
+            if (p === 'red') redTitleEl.textContent = '🔒 ' + baseRedTitle;
+        }
+        document.getElementById('pathType').addEventListener('change', updateLockIcons);
+
+        /* =========================
+           グローバル保存ハンドラ（1回だけ登録）
+           ========================= */
+        function attachGlobalSaveHandlers() {
+            const els = document.querySelectorAll('input[id], select[id], textarea[id]');
+            els.forEach(el => {
+                el.removeEventListener('input', saveInputsToStorage);
+                el.removeEventListener('change', saveInputsToStorage);
+                el.addEventListener('input', saveInputsToStorage);
+                el.addEventListener('change', saveInputsToStorage);
+            });
+
+            ['enableBlue', 'enableRed', 'enableGreen', 'enableWhite'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.removeEventListener('change', updateCardStates);
+                el.addEventListener('change', () => {
+                    updateCardStates();
+                    saveInputsToStorage();
+                });
+            });
+
+            const pathEl = document.getElementById('pathType');
+            if (pathEl) {
+                pathEl.removeEventListener('change', updateLockIcons);
+                pathEl.addEventListener('change', () => {
+                    updateLockIcons();
+                    saveInputsToStorage();
+                });
+            }
+        }
+
+        /* =========================
+           初期化：復元・ハンドラ取り付け（重複登録回避）
+           ========================= */
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = loadInputsFromStorage();
+            restoreDynamicWhiteFromStorage(data);
+            updateCardStates();
+            updateLockIcons();
+            attachGlobalSaveHandlers();
+
+            // add-button はここで一度だけ登録
+            const addSkillBtn = document.getElementById('addWhiteSkillBtn');
+            if (addSkillBtn) {
+                addSkillBtn.removeEventListener('click', addWhiteSkillRow);
+                addSkillBtn.addEventListener('click', () => addWhiteSkillRow());
+            }
+            const addGeneBtn = document.getElementById('addWhiteGeneBtn');
+            if (addGeneBtn) {
+                addGeneBtn.removeEventListener('click', addWhiteGeneRow);
+                addGeneBtn.addEventListener('click', () => addWhiteGeneRow());
+            }
+
+            // compute ボタン
+            const computeBtn = document.getElementById('compute');
+            if (computeBtn) {
+                computeBtn.removeEventListener('click', computeHandler);
+                computeBtn.addEventListener('click', computeHandler);
+            }
+
+            // update add button states
+            updateAddButtonsState();
+        });
+    </script>
+</body>
+
+</html>
