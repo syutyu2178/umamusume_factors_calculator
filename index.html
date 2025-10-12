@@ -449,11 +449,18 @@
         }
 
         /* =========================
-           白因子動的行作成（修正版）
+           白因子動的行作成
            ========================= */
         const MAX_SKILLS = 10;
         const MAX_GENES = 3;
-        const STORAGE_KEY = 'umaToolData_v3';
+        // バージョン管理付きストレージキー
+        const STORAGE_VERSION = 'v4';
+        const STORAGE_KEY = 'umaToolData_' + STORAGE_VERSION;
+        const OLD_STORAGE_KEYS = [
+            'umaToolData_v1',
+            'umaToolData_v2',
+            'umaToolData_v3'
+        ];
 
         function createSkillRow(data) {
             const div = document.createElement('div');
@@ -611,6 +618,10 @@
 
         function loadInputsFromStorage() {
             try {
+                // 古いバージョンのデータを削除
+                OLD_STORAGE_KEYS.forEach(key => {
+                    localStorage.removeItem(key);
+                });
                 const raw = localStorage.getItem(STORAGE_KEY);
                 if (!raw) return null;
                 const data = JSON.parse(raw);
