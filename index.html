@@ -206,7 +206,7 @@
                     style="margin-left:8px">
             </label>
 
-            <label>抽選回数(1〜5)
+            <label>因子抽選回数(1〜5)
                 <input id="numRerolls" type="number" value="4" min="1" max="5" class="smallInput"
                     style="margin-left:8px">
             </label>
@@ -676,7 +676,7 @@
            ========================= */
         function computeHandler() {
             const D = Math.max(1, parseInt(document.getElementById('numPerDay').value || 1, 10));
-            const r = Math.min(3, Math.max(1, parseInt(document.getElementById('numRerolls').value || 1, 10)));
+            const r = Math.min(5, Math.max(1, parseInt(document.getElementById('numRerolls').value || 1, 10)));
             const trialsPerDay = D * r;
             const T = Math.min(0.999999, (parseFloat(document.getElementById('targetProb').value) || 90) / 100);
             const path = document.getElementById('pathType').value;
@@ -953,5 +953,3 @@
 
 
 </html>
-
-
